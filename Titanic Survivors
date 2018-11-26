@@ -1,0 +1,88 @@
+library(rpart)
+library(randomForest)
+
+titanic<-read.csv('train.csv')
+titanict<-read.csv('test.csv')
+final=read.csv('gender_submission.csv')
+
+dim(titanic)
+dim(titanict)
+
+summary(titanic)
+str(titanic)
+table(titanic$Sex)
+prop.table(table(titanic$Sex))
+
+table(titanic$Sex, titanic$Survived)
+prop.table(table(titanic$Sex, titanic$Survived),1)
+
+# assuming no people survived
+titanict$Survived<-0
+
+# Since 75 percent female survived we will assume all women survived in the test dataset
+
+
+titanict$Survived[titanict$Sex=='female']<-1
+head(titanict)
+
+sol <- data.frame(PassengerId = titanict$PassengerId, Survived = titanict$Survived)
+write.csv(sol, file =  "solution.csv", row.names = FALSE)
+
+
+## Cleaning up the data
+
+summary(titanic)
+summary(titanict)
+
+#Age columns in both the test and train data set hae NA values and one value in the Fare column of test data set
+
+
+full<-rbind(titanic,titanict)
+dim(full)
+
+complete.cases(full)
+
+full[!complete.cases(full$Fare),]
+
+#Passenger ID 1044 has NA values
+full$Fare[full$PassengerId==1044]=median(full$Fare,na.rm=T)
+
+summary(full)
+
+
+# we use method = “anova” since we are predicting a continuous variable.
+
+
+model<-rpart(Age~Sex+SibSp+Pclass+Fare+Embarked,data=full[complete.cases(full),],method = 'anova')
+
+full[!complete.cases(full),"Age"]<-predict(model,full[!complete.cases(full),])
+
+
+
+train<-full[1:891,]
+test<-full[892:1309,]
+
+
+# Building a decision tree model
+
+my_model<-rpart(Survived~Sex+Age+SibSp + Parch + Fare + Embarked+Pclass,train,method = "class")
+
+# now test these cases on the training model first
+
+p1<-predict(my_model,train,type="class")
+
+table(p1,train$Survived)
+
+p2<-predict(my_model,test,type="class")
+
+submit <- data.frame(PassengerId = test$PassengerId, Survived = p2)
+write.csv(submit, file = "firstdtree.csv", row.names = FALSE)
+
+set.seed(222)
+mymodel2<-randomForest(as.factor(Survived)~Sex+Age+SibSp + Parch + Fare + Embarked+Pclass,train,importance=TRUE,ntree=2000)
+
+
+p3<-predict(mymodel2,train)
+table(train$Survived,p3)
+
+p4main<-predict(mymodel2,test)
