@@ -1,0 +1,44 @@
+x<-seq(1,10,1)
+#x=1:10
+
+y<-c(11,12,18,14,17,NA,NA,19,NA,27)
+z<-c(19,11,2,14,20,4,9,10,18,1)
+w<-c(1,4,7,10,3,5,7,6,6,9)
+
+lin<-data.frame(x,y,z,w)
+lin
+
+
+# correlation of dat will give you NA values
+cor(lin)
+# we will not use NA values and find out the correlation
+
+cor(lin,use='complete.obs')
+
+symnum(cor(lin,use='complete.obs'))
+## With symnum you can see the * corresponding to 0.95 which shows that x and y are correlated
+
+## building the model
+
+mod<-lm(y~x,data=lin)
+mod
+## We have got the y intercept and the x xoefficient
+
+# now we will create the indicator variable
+
+
+Ind<-function(t)
+{
+  x=dim(length(x))
+  x[which(is.na(t))]=0
+  x[which(!is.na(t))]=1
+  return(x)
+}
+
+lin$I=Ind(lin$y)
+lin
+for(i in 1:nrow(lin))
+{
+  if(lin$I==0)
+    lin$y=9.743+1.509*lin$x
+}  
