@@ -1,0 +1,61 @@
+### K nearest neign=bour
+
+
+
+## To build  model which will be able to predict which species the flower belong to based on different features
+
+## Knn is good with numerical
+
+
+## We can see that sepal length varies from 4.3 to 7.9
+## sepal width varies from 2 to 4.4
+## petal length varies from 1 to 6.9 (wider range)
+## petal width varies from 0.100 to 2.5 (less range)
+
+
+## the problem with different changes
+## the features having larger values will have an undue influence on the prediction
+## since Knn uses a distance function
+## it should be normalised
+
+
+## the value ten will be between 0 and 1
+## 
+
+
+
+## square root of totla no. of observations should genrally be the value of 12
+## if we generally have a tie we should select odd no. for k
+## square root of 150 is between 12 1nd 13
+## choose 13 since its an odd no.
+
+kn11<-read.csv('binary.csv')
+head(kn11)
+
+## First normalisation
+
+
+knn11_n<-(as.data.frame(lapply(kn11[,-1],function(x) {(x-min(x))/(max(x)-min(x))})))
+
+
+head(knn11_n)
+summary(knn11_n)
+
+set.seed(199)
+Sample1<-sample(2,nrow(knn11_n),replace=T, prob=c(0.8,0.2))
+knn_train<-knn11_n[Sample1==1,]
+knn_test<-knn11_n[Sample1==2,]
+
+knn_train_target<-kn11[Sample1==1,1]
+head(knn_train_target)
+
+knn_test_target<-kn11[Sample1==2,1]
+
+library(class)
+pred<-knn(knn_train,knn_test,knn_train_target,k=21)
+pred
+
+
+## Confusion matrix
+
+table(pred,knn_test_target)
