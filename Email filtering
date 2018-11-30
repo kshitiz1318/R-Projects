@@ -1,0 +1,136 @@
+sms<-read.csv('sms_spam.csv',stringsAsFactors = FALSE)
+table(sms$type)
+prop.table(table(sms$type))
+## 86 percent messages are ham and 13 percent are spam
+
+str(sms)
+
+sms$type=as.factor(sms$type)
+
+complete.cases(sms)
+which(!complete.cases(sms))
+
+# n char is used to get the no. of characters
+sms$lengt<-nchar(sms$text)
+head(sms)
+
+
+library(ggplot2)
+
+# If we want to separate the two histogras we can use gacet wrap and define that we want to split by type
+
+ggplot(sms,aes(sms$lengt,fill=sms$type))+geom_histogram(binwidth=50)+facet_wrap(~type)
+
+
+########## Text mining
+
+
+# Corpus of words
+# so if we have 5000 lines each line will be created in a separated document for the analysis purpose
+# Clean the data by removing numbers, punctuation and stop wors so that
+# we are looking only at those words which are meaningful and helpful to us
+# for analysis 
+
+## Create document term matrix
+install.packages('tm')
+library(tm)
+
+# creating corpus of words
+# using corpus function of tm package
+# vector source will convert this texts into a vector
+sms_corpus<-Corpus(VectorSource(sms$text))
+# there are as many documents as the no.of rows in the text
+sms_corpus
+
+# getting the first 3 documents 
+inspect(sms_corpus[1:3])
+
+# cleaning 
+
+# transalate all the letters to lower case
+sms_corpus_clean<-tm_map(sms_corpus,tolower)
+
+inspect(sms_corpus_clean[1:4])
+
+# removing the numbers
+sms_corpus_clean<-tm_map(sms_corpus_clean,removeNumbers)
+
+# removing the punctuation
+sms_corpus_clean<-tm_map(sms_corpus_clean,removePunctuation)
+
+#remove stopwords like ou, me, i , ourselves
+sms_corpus_clean<-tm_map(sms_corpus_clean,removeWords,stopwords())
+
+# remove Whitespace
+sms_corpus_clean<-tm_map(sms_corpus_clean,stripWhitespace)
+
+
+
+
+### Document term matrix
+
+sms_dtm<-DocumentTermMatrix(sms_corpus_clean)
+inspect(sms_dtm[10:20,17:25])
+
+## Another method
+sms_dtm=DocumentTermMatrix((sms_corpus_clean),control = list(
+  tolower=TRUE,
+  removeNumbers=TRUE,
+  removePunctuation=TRUE,
+  stripWhitespace=TRUE,
+  stopwords=TRUE
+))
+
+
+spamcloud<-which(as.character(sms$type)=='spam')
+hamcloud<-which(as.character(sms$type)=='ham')
+length(spamcloud)
+length(hamcloud)
+
+
+install.packages('wordcloud')
+library(wordcloud)
+
+#In wordcloud there will every word whose frequency is more than 40, words with larger font have more frequency
+wordcloud(sms_corpus_clean[spamcloud],min.freq = 40)
+wordcloud(sms_corpus_clean[hamcloud],min.freq = 40)
+
+#Now lets build a spam filter using naive bayes classifier algorithm
+
+#partioning corpus,df,dtm into training and test data
+
+
+sms_labels_train<-sms$type[1:4169]
+sms_labels_test<-sms$type[4170:5559]
+
+prop.table(table(sms_labels_train))
+
+sms_dtm_train<-sms_dtm[1:4169,]
+sms_dtm_test<-sms_dtm[4170:5559,]
+
+sms_corpus_clean_train<-sms_corpus_clean[1:4169]
+sms_corpus_clean_test<-sms_corpus_clean[4170:5559]
+
+
+
+#  finding frequent words - we will look at the training data nd see whether those are ham or spam
+frequent_words<-findFreqTerms(sms_dtm_train,5)
+frequent_words[1:10] # these are the words coming atleast 5 times
+
+
+inspect(sms_dtm_train[,frequent_words])
+
+
+## creating document term matrix using frequent words
+sms_freword_train<-sms_dtm_train[,frequent_words]
+
+sms_freword_test<-sms_dtm_test[,frequent_words]
+
+
+
+yesorno<-function(x){
+y<-  ifelse(x>0,1,0)
+y<-factor(y,levels=c(0,1),labels=c("No","Yes"))
+}
+sms_train<-apply(sms_freword_train,2,yesorno)
+sms_test<-apply(sms_freword_test,2,yesorno)
